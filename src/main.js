@@ -713,7 +713,6 @@ class ShiftManagementApp {
 
   showAddDoctorModal() {
     document.getElementById('doctor-name').value = '';
-    document.getElementById('doctor-department').value = '';
     document.getElementById('annual-day-shifts').value = '0';
     document.getElementById('annual-night-shifts').value = '0';
     document.querySelectorAll('.ng-weekday').forEach(cb => cb.checked = false);

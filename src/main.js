@@ -56,6 +56,13 @@ class ShiftManagementApp {
   set monthlyRequests(v) { this.currentSchedule.monthlyRequests = v; }
   get monthlyLocks() { return this.currentSchedule.monthlyLocks; }
   set monthlyLocks(v) { this.currentSchedule.monthlyLocks = v; }
+  get customHolidays() {
+    if (!this.currentSchedule.customHolidays) {
+      this.currentSchedule.customHolidays = {};
+    }
+    return this.currentSchedule.customHolidays;
+  }
+  set customHolidays(v) { this.currentSchedule.customHolidays = v; }
 
   init() {
     this.loadData();
@@ -506,23 +513,34 @@ class ShiftManagementApp {
       const date = new Date(year, month - 1, day);
       const dateStr = this.formatDate(date);
       const dayOfWeek = date.getDay();
-      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       const isHoliday = this.isHoliday(date);
+      const isWeekendDefault = dayOfWeek === 0 || dayOfWeek === 6;
 
       // 過去の日付または月全体がロックされているかチェック
       const isPast = date < today;
       const isLocked = isPast || isMonthLocked;
 
       let dayClass = 'calendar-day';
-      if (isWeekend) dayClass += ' weekend';
-      if (isHoliday) dayClass += ' holiday';
+      if (isHoliday && isWeekendDefault) dayClass += ' weekend';
+      if (isHoliday && !isWeekendDefault) dayClass += ' holiday';
       if (isLocked) dayClass += ' locked'; // ロック用のスタイルが必要かも
 
       calendarHTML += `<div class="${dayClass}">`;
-      calendarHTML += `<div class="day-number">${day}</div>`;
 
-      // 土日祝は日直と当直、平日は当直のみ
-      if (isWeekend || isHoliday) {
+      const toggleDisplay = isLocked ? 'none' : 'block';
+      const toggleLabel = isHoliday ? '🔴休日' : '🔵平日';
+
+      calendarHTML += `
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:4px;">
+          <div class="day-number">${day}</div>
+          <button class="btn btn-sm btn-secondary" style="padding: 2px 4px; font-size: 0.7rem; display: ${toggleDisplay}" onclick="app.toggleHoliday('${dateStr}')" title="平日/休日 切替">
+            ${toggleLabel}
+          </button>
+        </div>
+      `;
+
+      // 休日は日直と当直、平日は当直のみ
+      if (isHoliday) {
         // 日直
         const dayShiftDoctor = this.shifts[dateStr]?.dayShift;
         const isDayFixed = this.shifts[dateStr]?.dayLocked;
@@ -1565,7 +1583,6 @@ class ShiftManagementApp {
       const date = new Date(year, month - 1, day);
       const dateStr = this.formatDate(date);
       const dayOfWeek = date.getDay();
-      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       const isHoliday = this.isHoliday(date);
 
       // 前日の当直医を取得（連続勤務防止用）
@@ -1578,8 +1595,8 @@ class ShiftManagementApp {
         this.shifts[dateStr] = {};
       }
 
-      // 土日祝は日直も割り当て
-      if ((isWeekend || isHoliday) && !this.shifts[dateStr].dayShift) {
+      // 休日は日直も割り当て
+      if (isHoliday && !this.shifts[dateStr].dayShift) {
         const availableDoctors = this.getAvailableDoctors(dateStr, 'day');
 
         // 優先度フィルタリング
@@ -1726,7 +1743,6 @@ class ShiftManagementApp {
       const date = new Date(year, month - 1, day);
       const dateStr = this.formatDate(date);
       const dayOfWeek = date.getDay();
-      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       const isHoliday = this.isHoliday(date);
 
       const prevDate = new Date(year, month - 1, day - 1);
@@ -1734,7 +1750,7 @@ class ShiftManagementApp {
       const prevNightDoctorId = this.shifts[prevDateStr]?.nightShift;
 
       // 日直割り当て
-      if ((isWeekend || isHoliday) && !this.shifts[dateStr].dayShift) {
+      if (isHoliday && !this.shifts[dateStr].dayShift) {
         const availableDoctors = this.getAvailableDoctors(dateStr, 'day');
 
         let candidates = availableDoctors;
@@ -1847,7 +1863,17 @@ class ShiftManagementApp {
     return { dayShifts, nightShifts };
   }
 
-  isHoliday(date) {
+  toggleHoliday(dateStr) {
+    const parts = dateStr.split('-');
+    const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+    const currentlyHoliday = this.isHoliday(date);
+
+    this.customHolidays[dateStr] = !currentlyHoliday;
+    this.saveData();
+    this.renderCalendar();
+  }
+
+  isHolidayDefault(date) {
     // 簡易的な祝日判定（実際には祝日APIを使用することを推奨）
     const holidays = [
       '01-01', // 元日
@@ -1866,11 +1892,22 @@ class ShiftManagementApp {
       '10-14', // スポーツの日（概算）
       '11-03', // 文化の日
       '11-23', // 勤労感謝の日
+      '12-30', // 年末休み
       '12-31', // 大晦日
     ];
 
     const monthDay = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     return holidays.includes(monthDay);
+  }
+
+  isHoliday(date) {
+    const dateStr = this.formatDate(date);
+    if (this.customHolidays && this.customHolidays[dateStr] !== undefined) {
+      return this.customHolidays[dateStr];
+    }
+    const dayOfWeek = date.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) return true;
+    return this.isHolidayDefault(date);
   }
 
   formatDate(date) {

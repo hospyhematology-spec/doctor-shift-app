@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>医師シフト管理システム</title>
+  <meta name="description" content="医師のシフトを効率的に管理するためのWebアプリケーション">
+
+  <!-- PWA設定 -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#2196f3">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="シフト管理">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="apple-touch-icon" href="/icon.svg">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+
+  <link rel="stylesheet" href="/src/style.css">
+
+  <style>
+    /* インストールバナー用スタイル */
+    .install-banner {
+      background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+      color: white;
+      padding: var(--spacing-lg);
+      margin-bottom: var(--spacing-lg);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      animation: slideDown var(--transition-base);
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .install-banner-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: var(--spacing-lg);
+    }
+
+    .install-banner strong {
+      font-size: var(--font-size-lg);
+      display: block;
+    }
+
+    @media (max-width: 768px) {
+      .install-banner-content {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <!-- インストールバナー -->
+    <div id="install-banner" class="install-banner hidden">
+      <div class="install-banner-content">
+        <div>
+          <strong>🖥️ デスクトップアプリとして使用</strong>
+          <p style="margin: 0.25rem 0 0 0; font-size: 0.875rem; opacity: 0.9;">
+            ブラウザを開かずに、アプリのように起動できます
+          </p>
+        </div>
+        <div class="flex gap-sm">
+          <button id="install-button" class="btn btn-primary btn-sm">
+            インストール
+          </button>
+          <button id="dismiss-install" class="btn btn-secondary btn-sm">
+            後で
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ヘッダー -->
+    <header class="app-header">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h1>🏥 医師シフト管理システム</h1>
+          <p>効率的なシフト管理で、より良い医療体制を</p>
+        </div>
+        <button id="show-install-info" class="btn btn-secondary" style="display: none;">
+          💾 インストール
+        </button>
+      </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main id="main-content">
+      <!-- 初期設定画面 -->
+      <div id="setup-screen" class="hidden">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">初期設定</h2>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="year-select">対象年度 (4月〜3月)</label>
+            <select id="year-select" class="form-select">
+              <!-- JavaScriptで動的に生成 -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">使用するスケジュール（最大4つ）</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.5rem;">
+              <label
+                style="display: flex; align-items: center; gap: 8px; padding: 0.75rem; border: 1px solid var(--gray-200); border-radius: var(--radius-md); cursor: pointer; background: white;">
+                <input type="checkbox" id="sched-enable-0" checked>
+                <span>📋 スケジュール1</span>
+                <input type="text" id="sched-name-0" class="form-input" value="内科"
+                  style="margin-left: auto; width: 100px; padding: 0.25rem 0.5rem; font-size: 0.85rem;"
+                  placeholder="名称">
+              </label>
+              <label
+                style="display: flex; align-items: center; gap: 8px; padding: 0.75rem; border: 1px solid var(--gray-200); border-radius: var(--radius-md); cursor: pointer; background: white;">
+                <input type="checkbox" id="sched-enable-1">
+                <span>📋 スケジュール2</span>
+                <input type="text" id="sched-name-1" class="form-input" value="外科"
+                  style="margin-left: auto; width: 100px; padding: 0.25rem 0.5rem; font-size: 0.85rem;"
+                  placeholder="名称">
+              </label>
+              <label
+                style="display: flex; align-items: center; gap: 8px; padding: 0.75rem; border: 1px solid var(--gray-200); border-radius: var(--radius-md); cursor: pointer; background: white;">
+                <input type="checkbox" id="sched-enable-2">
+                <span>📋 スケジュール3</span>
+                <input type="text" id="sched-name-2" class="form-input" value="研修医1年目"
+                  style="margin-left: auto; width: 100px; padding: 0.25rem 0.5rem; font-size: 0.85rem;"
+                  placeholder="名称">
+              </label>
+              <label
+                style="display: flex; align-items: center; gap: 8px; padding: 0.75rem; border: 1px solid var(--gray-200); border-radius: var(--radius-md); cursor: pointer; background: white;">
+                <input type="checkbox" id="sched-enable-3">
+                <span>📋 スケジュール4</span>
+                <input type="text" id="sched-name-3" class="form-input" value="研修医2年目"
+                  style="margin-left: auto; width: 100px; padding: 0.25rem 0.5rem; font-size: 0.85rem;"
+                  placeholder="名称">
+              </label>
+            </div>
+          </div>
+          <button id="start-btn" class="btn btn-primary btn-lg">設定を開始</button>
+        </div>
+      </div>
+
+      <!-- メイン管理画面 -->
+      <div id="management-screen" class="hidden">
+        <!-- 年・月選択 -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">期間選択</h2>
+          </div>
+          <div class="grid grid-cols-2">
+            <div class="form-group">
+              <label class="form-label" for="current-year">年度</label>
+              <select id="current-year" class="form-select">
+                <!-- JavaScriptで動的に生成 -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="current-month">月</label>
+              <select id="current-month" class="form-select">
+                <!-- JavaScriptで動的に生成 -->
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- スケジュールタブ -->
+        <div class="card">
+          <div id="schedule-tabs" style="display: flex; border-bottom: 2px solid var(--gray-200); margin-bottom: 0;">
+            <!-- JavaScriptで動的に生成 -->
+          </div>
+
+          <!-- 医師管理 -->
+          <div class="card-header" style="margin-top: 1rem;">
+            <h2 class="card-title" id="schedule-section-title">医師管理</h2>
+            <div class="flex gap-sm">
+              <button id="show-stats-btn" class="btn btn-secondary">
+                📊 統計を表示
+              </button>
+              <button id="import-csv-btn" class="btn btn-secondary">
+                📥 CSVインポート
+              </button>
+              <button id="add-doctor-btn" class="btn btn-primary">
+                ➕ 医師を追加
+              </button>
+            </div>
+          </div>
+          <div id="doctor-list" class="doctor-list">
+            <!-- JavaScriptで動的に生成 -->
+          </div>
+        </div>
+        <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
+
+        <!-- カレンダー表示 -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">シフトカレンダー</h2>
+            <div class="flex gap-sm">
+              <button id="auto-assign-btn" class="btn btn-primary">
+                🤖 自動割り当て
+              </button>
+              <button id="auto-assign-annual-btn" class="btn btn-warning" style="margin-left: 0.5rem;"
+                title="現在選択されている年度（4月〜翌3月）を一括で割り当てます">
+                📅 年間一括
+              </button>
+              <button id="export-btn" class="btn btn-secondary">
+                📥 エクスポート
+              </button>
+            </div>
+          </div>
+          <div id="calendar-container">
+            <!-- JavaScriptで動的に生成 -->
+          </div>
+
+          <!-- 年度統計 -->
+          <div class="card" style="margin-top: 1.5rem;">
+            <div class="card-header">
+              <h2 class="card-title">📅 年度カレンダー統計</h2>
+              <div style="font-size: 0.9rem; color: var(--text-secondary);">
+                <span id="stats-year"></span>年度 (4月1日〜翌年3月31日)
+              </div>
+            </div>
+            <div
+              style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; padding: 1rem;">
+              <div class="stats-summary-item">
+                <div class="stats-summary-label">平日（当直のみ）</div>
+                <div class="stats-summary-value" id="stats-weekday-count">-</div>
+              </div>
+              <div class="stats-summary-item">
+                <div class="stats-summary-label">土日祝（日直・当直）</div>
+                <div class="stats-summary-value" id="stats-holiday-count">-</div>
+              </div>
+              <div class="stats-summary-item">
+                <div class="stats-summary-label">合計日数</div>
+                <div class="stats-summary-value" id="stats-total-days">-</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- モーダル: 医師追加 -->
+  <div id="add-doctor-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">医師を追加</h3>
+        <button id="close-add-doctor-modal" class="btn btn-icon btn-secondary">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="doctor-name">名前 *</label>
+          <input type="text" id="doctor-name" class="form-input" placeholder="山田 太郎" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="annual-day-shifts">年間日直コマ数</label>
+          <input type="number" id="annual-day-shifts" class="form-input" value="0" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="annual-night-shifts">年間当直コマ数</label>
+          <input type="number" id="annual-night-shifts" class="form-input" value="0" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">年間NGの曜日</label>
+          <div class="flex gap-sm" style="flex-wrap: wrap;">
+            <label style="display: flex; align-items: center; gap: 4px;">
+              <input type="checkbox" value="0" class="ng-weekday"> 日
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px;">
+              <input type="checkbox" value="1" class="ng-weekday"> 月
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px;">
+              <input type="checkbox" value="2" class="ng-weekday"> 火
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px;">
+              <input type="checkbox" value="3" class="ng-weekday"> 水
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px;">
+              <input type="checkbox" value="4" class="ng-weekday"> 木
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px;">
+              <input type="checkbox" value="5" class="ng-weekday"> 金
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px;">
+              <input type="checkbox" value="6" class="ng-weekday"> 土
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancel-add-doctor" class="btn btn-secondary">キャンセル</button>
+        <button id="save-doctor" class="btn btn-primary">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- モーダル: 医師編集 -->
+  <div id="edit-doctor-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">医師情報を編集</h3>
+        <button id="close-edit-doctor-modal" class="btn btn-icon btn-secondary">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="edit-doctor-name">名前 *</label>
+          <input type="text" id="edit-doctor-name" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit-annual-day-shifts">年間日直コマ数</label>
+          <input type="number" id="edit-annual-day-shifts" class="form-input" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit-annual-night-shifts">年間当直コマ数</label>
+          <input type="number" id="edit-annual-night-shifts" class="form-input" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">年間NGの曜日</label>
+          <div class="flex gap-sm" style="flex-wrap: wrap;">
+            <label style="display: flex; align-items: center; gap: 4px;">
+              <input type="checkbox" value="0" class="edit-ng-weekday"> 日
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px;">
+              <input type="checkbox" value="1" class="edit-ng-weekday"> 月
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px;">
+              <input type="checkbox" value="2" class="edit-ng-weekday"> 火
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px;">
+              <input type="checkbox" value="3" class="edit-ng-weekday"> 水
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px;">
+              <input type="checkbox" value="4" class="edit-ng-weekday"> 木
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px;">
+              <input type="checkbox" value="5" class="edit-ng-weekday"> 金
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px;">
+              <input type="checkbox" value="6" class="edit-ng-weekday"> 土
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancel-edit-doctor" class="btn btn-secondary">キャンセル</button>
+        <button id="update-doctor" class="btn btn-primary">更新</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- モーダル: 月別リクエスト -->
+  <div id="request-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">📅 月別設定</h3>
+        <button id="close-request-modal" class="btn btn-icon btn-secondary">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-md">対象: <strong id="request-doctor-name"></strong></p>
+
+        <div class="tab-header" style="margin-bottom: 1rem; border-bottom: 1px solid var(--gray-200); display: flex;">
+          <button id="tab-btn-ng" class="tab-btn active" onclick="app.switchRequestTab('ng')"
+            style="padding: 0.5rem 1rem; border: none; background: none; border-bottom: 2px solid var(--primary-500); font-weight: 600; color: var(--primary-700); cursor: pointer;">NG日程</button>
+          <button id="tab-btn-force" class="tab-btn" onclick="app.switchRequestTab('force')"
+            style="padding: 0.5rem 1rem; border: none; background: none; border-bottom: 2px solid transparent; font-weight: 600; color: var(--text-secondary); cursor: pointer;">強制割り当て</button>
+        </div>
+
+        <div id="tab-ng" class="tab-content">
+          <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem;">NGの日付を選択（自動割り当て回避）</p>
+          <div id="request-dates-container">
+            <!-- JavaScriptで動的に生成 -->
+          </div>
+        </div>
+
+        <div id="tab-force" class="tab-content hidden">
+          <div
+            style="margin-bottom: 1rem; padding: 0.5rem; background: var(--gray-50); border-radius: var(--radius-sm); display: flex; gap: 1rem; align-items: center;">
+            <span style="font-weight: 500; font-size: 0.9rem;">タイプ:</span>
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="radio" name="force-type" value="night" checked onchange="app.renderForceCalendar()"> 当直
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="radio" name="force-type" value="day" onchange="app.renderForceCalendar()"> 日直
+            </label>
+          </div>
+          <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem;">クリックで強制割り当て（ロック）/解除</p>
+          <div id="force-dates-container" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
+            <!-- JavaScriptで動的に生成 -->
+          </div>
+          <div style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-tertiary);">
+            <span
+              style="display:inline-block; width:12px; height:12px; background:var(--primary-100); border:1px solid var(--primary-300); margin-right:4px; vertical-align:middle;"></span>割り当て済み
+            <span
+              style="display:inline-block; width:12px; height:12px; background:var(--gray-200); margin-left:8px; margin-right:4px; vertical-align:middle;"></span>他医師で固定中
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button id="cancel-request" class="btn btn-secondary">キャンセル</button>
+        <button id="save-request" class="btn btn-primary">設定を保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- モーダル: 統計表示 -->
+  <div id="stats-modal" class="modal-backdrop hidden">
+    <div class="modal" style="max-width: 800px;">
+      <div class="modal-header">
+        <h3 class="modal-title">📊 シフト統計</h3>
+        <button id="close-stats-modal" class="btn btn-icon btn-secondary">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="stats-container">
+          <!-- JavaScriptで動的に生成 -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="close-stats-btn" class="btn btn-primary">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- モーダル: CSVインポートヘルプ -->
+  <div id="csv-help-modal" class="modal-backdrop hidden">
+    <div class="modal" style="max-width: 700px;">
+      <div class="modal-header">
+        <h3 class="modal-title">📥 CSVインポート</h3>
+        <button id="close-csv-help-modal" class="btn btn-icon btn-secondary">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="margin-bottom: 1.5rem;">
+          <h4 style="color: var(--primary-700); margin-bottom: 0.5rem;">📋 CSVフォーマット</h4>
+          <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+            以下のフォーマットのCSVファイルを作成してインポートしてください:
+          </p>
+          <div
+            style="background: var(--gray-100); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem;">
+            <p style="font-weight: 600; margin-bottom: 0.5rem;">フォーマット（A列〜E列）:</p>
+            <ol style="margin-left: 1.5rem; line-height: 1.8;">
+              <li><strong>名前</strong> (必須)</li>
+              <li><strong>NG希望日</strong> (日付をカンマ区切り: eg. 2026/4/1)</li>
+              <li><strong>NG曜日(通年)</strong> (曜日をカンマ区切り: eg. 月,水)</li>
+              <li><strong>年間日直コマ数</strong> (数値)</li>
+              <li><strong>年間当直コマ数</strong> (数値)</li>
+            </ol>
+            <div
+              style="margin-top: 1rem; padding: 0.5rem; background: #fff; border: 1px solid var(--gray-200); font-family: monospace; font-size: 0.85rem; overflow-x: auto;">
+              名前,NG希望日,NG曜日(通年),日直数,当直数<br>
+              山田太郎,"2026/4/1, 2026/4/15","月,水",12,24<br>
+              佐藤花子,,火,10,20
+            </div>
+          </div>
+        </div>
+        <div id="csv-preview-container" style="display: none;">
+          <h4 style="color: var(--primary-700); margin-bottom: 0.5rem;">👀 プレビュー</h4>
+          <div id="csv-preview"
+            style="max-height: 300px; overflow-y: auto; background: var(--gray-50); padding: 1rem; border-radius: var(--radius-md);">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancel-csv-import" class="btn btn-secondary">キャンセル</button>
+        <button id="select-csv-file" class="btn btn-primary">ファイルを選択</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+
+</body>
+
+</html>
